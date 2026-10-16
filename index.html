@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>billable.co - Fair & Instant Bill Splitter</title>
+  <meta name="description" content="A friendly, precise bill splitting app for dinners, trips, and shared expenses with custom splits, tips, multi-currency conversion, and shareable breakdowns." />
+  <meta property="og:title" content="billable.co - Fair & Instant Bill Splitter" />
+  <meta property="og:description" content="A friendly, precise bill splitting app for dinners, trips, and shared expenses with custom splits, tips, multi-currency conversion, and shareable breakdowns." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-logo" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16l3-2 3 2 3-2 3 2 3-2 3 2V4a2 2 0 0 0-2-2z"/>
+            <path d="M8 8h8"/>
+            <path d="M8 12h8"/>
+            <path d="M8 16h5"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">billable<span class="brand-dot">.co</span></h1>
+          <p class="brand-tagline">Fair, accurate bill splitting down to the paise</p>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <!-- Currency Selector Dropdown -->
+        <div class="currency-selector-wrap" title="Select Bill Currency">
+          <label for="currency-select" class="visually-hidden">Currency</label>
+          <div class="currency-select-box">
+            <span class="currency-icon" id="header-currency-icon" aria-hidden="true">₹</span>
+            <select id="currency-select" class="currency-dropdown" aria-label="Select Bill Currency">
+              <option value="INR" selected>INR (₹) · Rupee</option>
+              <option value="USD">USD ($) · US Dollar</option>
+              <option value="EUR">EUR (€) · Euro</option>
+              <option value="GBP">GBP (£) · British Pound</option>
+              <option value="AED">AED (د.إ) · UAE Dirham</option>
+              <option value="SGD">SGD (S$) · Singapore Dollar</option>
+              <option value="CAD">CAD (C$) · Canadian Dollar</option>
+              <option value="AUD">AUD (A$) · Australian Dollar</option>
+              <option value="JPY">JPY (¥) · Japanese Yen</option>
+              <option value="THB">THB (฿) · Thai Baht</option>
+            </select>
+            <svg class="select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </div>
+        </div>
+
+        <button type="button" id="btn-new-bill" class="btn btn-secondary btn-sm" title="Start a fresh calculation">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          <span>New Bill</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Welcome Subheader -->
+  <div class="status-banner" id="status-banner">
+    <div class="status-banner-content">
+      <span class="status-indicator"></span>
+      <span id="status-message">Bill split ready — enter your bill details below to calculate fair shares</span>
+    </div>
+  </div>
+
+  <!-- Main Content Layout -->
+  <main class="main-content">
+    <div class="content-grid">
+      
+      <!-- Left Column: Bill-Entry Form -->
+      <section class="card form-card" aria-labelledby="form-heading">
+        <div class="card-header">
+          <h2 id="form-heading" class="card-title">Bill Details</h2>
+          <span class="card-subtitle">Split restaurant meals, rent, or group travels</span>
+        </div>
+
+        <form id="bill-form" novalidate>
+          <!-- Occasion Name Field -->
+          <div class="form-group" id="group-occasion">
+            <label for="occasion-input" class="form-label">
+              Occasion or Party Name <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="occasion-input" 
+              name="occasion" 
+              class="form-input" 
+              placeholder="e.g. Dinner with Friends, Goa Trip, Flat Groceries"
+              maxlength="80"
+              autocomplete="off"
+              required
+            />
+            <div class="quick-chips" aria-label="Suggested occasions">
+              <span class="quick-chips-label">Quick fill:</span>
+              <button type="button" class="chip-btn" data-preset="Dinner with friends">Dinner</button>
+              <button type="button" class="chip-btn" data-preset="Weekend trip">Weekend trip</button>
+              <button type="button" class="chip-btn" data-preset="House groceries">Groceries</button>
+              <button type="button" class="chip-btn" data-preset="Movie & snacks">Movie night</button>
+            </div>
+            <div class="field-error" id="error-occasion" role="alert" aria-live="assertive"></div>
+          </div>
+
+          <!-- Total Bill Amount Field -->
+          <div class="form-group" id="group-amount">
+            <label for="amount-input" class="form-label">
+              Total Bill Amount <span class="required" aria-hidden="true">*</span>
+            </label>
+            <div class="input-with-prefix">
+              <span class="input-prefix" id="bill-currency-prefix" aria-hidden="true">₹</span>
+              <input 
+                type="number" 
+                id="amount-input" 
+                name="amount" 
+                class="form-input with-prefix" 
+                placeholder="0.00" 
+                step="0.01" 
+                min="0.01" 
+                max="99999999.99"
+                required
+              />
+            </div>
+            <p class="field-hint" id="amount-hint">Enter the total amount in Indian Rupees (₹)</p>
+            <div class="field-error" id="error-amount" role="alert" aria-live="assertive"></div>
+          </div>
+
+          <!-- Split Mode Selection -->
+          <div class="form-group">
+            <fieldset class="mode-fieldset">
+              <legend class="form-label">Split Mode</legend>
+              <div class="segmented-control" role="radiogroup" aria-label="Split mode selector">
+                <button 
+                  type="button" 
+                  id="mode-equal-btn" 
+                  class="segmented-btn active" 
+                  role="radio" 
+                  aria-checked="true"
+                  data-mode="equal"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="6" width="18" height="4" rx="1"/>
+                    <rect x="3" y="14" width="18" height="4" rx="1"/>
+                  </svg>
+                  Split Equally
+                </button>
+                <button 
+                  type="button" 
+                  id="mode-custom-btn" 
+                  class="segmented-btn" 
+                  role="radio" 
+                  aria-checked="false"
+                  data-mode="custom"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                  Custom Split
+                </button>
+              </div>
+            </fieldset>
+          </div>
+
+          <!-- Equal Split Settings Panel -->
+          <div id="equal-settings-panel" class="split-panel">
+            <div class="form-group" id="group-people">
+              <label for="people-input" class="form-label">
+                Number of People <span class="required" aria-hidden="true">*</span>
+              </label>
+              <div class="stepper-input">
+                <button type="button" id="btn-decrement-people" class="stepper-btn" aria-label="Decrease participant count">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                </button>
+                <input 
+                  type="number" 
+                  id="people-input" 
+                  name="people" 
+                  class="form-input stepper-field" 
+                  value="3" 
+                  min="1" 
+                  max="100" 
+                  step="1"
+                  required
+                />
+                <button type="button" id="btn-increment-people" class="stepper-btn" aria-label="Increase participant count">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="field-error" id="error-people" role="alert" aria-live="assertive"></div>
+            </div>
+
+            <!-- Participant Names Accordion -->
+            <div class="names-accordion">
+              <button type="button" id="btn-toggle-names" class="accordion-trigger" aria-expanded="false" aria-controls="names-container">
+                <span class="accordion-title">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                  Customize Participant Names (Optional)
+                </span>
+                <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+              <div id="names-container" class="accordion-content hidden">
+                <p class="field-hint mb-3">Add names like Shlok, Het, or Nayan. Leave empty to use default Person numbers.</p>
+                <div id="equal-names-list" class="names-grid">
+                  <!-- Populated dynamically based on participant count -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Custom Split Settings Panel -->
+          <div id="custom-settings-panel" class="split-panel hidden">
+            <div class="custom-panel-header">
+              <div>
+                <h3 class="custom-panel-title">Custom Contributions</h3>
+                <p class="field-hint">Assign specific payment amounts for each person</p>
+              </div>
+              <button type="button" id="btn-add-person" class="btn btn-outline btn-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add Person
+              </button>
+            </div>
+
+            <div id="custom-participants-list" class="custom-list">
+              <!-- Dynamically populated rows -->
+            </div>
+
+            <!-- Custom Split Reconciliation Bar -->
+            <div id="custom-balance-card" class="balance-card">
+              <div class="balance-row">
+                <span class="balance-label">Total to split:</span>
+                <span id="custom-target-amount" class="balance-value">₹0.00</span>
+              </div>
+              <div class="balance-row">
+                <span class="balance-label">Allocated sum:</span>
+                <span id="custom-allocated-amount" class="balance-value">₹0.00</span>
+              </div>
+              <div class="balance-divider"></div>
+              <div class="balance-row balance-status-row">
+                <span class="balance-label" id="custom-difference-label">Difference:</span>
+                <span id="custom-difference-amount" class="balance-value balance-ok">₹0.00</span>
+              </div>
+              <p id="custom-balance-message" class="balance-message">Contributions must match total bill amount.</p>
+              <div class="balance-actions">
+                <button type="button" id="btn-auto-balance" class="btn btn-text btn-xs">
+                  ⚡ Auto-balance remaining evenly
+                </button>
+              </div>
+            </div>
+            <div class="field-error" id="error-custom" role="alert" aria-live="assertive"></div>
+          </div>
+
+          <!-- Tip Settings Section -->
+          <div class="tip-section">
+            <div class="tip-toggle-row">
+              <label class="switch-label" for="tip-toggle">
+                <input type="checkbox" id="tip-toggle" class="switch-checkbox" />
+                <span class="switch-slider" aria-hidden="true"></span>
+                <span class="switch-text">Add Tip to Bill</span>
+              </label>
+              <span id="tip-indicator" class="tip-badge hidden">Tip included</span>
+            </div>
+
+            <div id="tip-controls" class="tip-controls hidden">
+              <div class="tip-preset-buttons" role="group" aria-label="Quick tip percentage options">
+                <button type="button" class="tip-chip" data-tip="5">5%</button>
+                <button type="button" class="tip-chip active" data-tip="10">10%</button>
+                <button type="button" class="tip-chip" data-tip="15">15%</button>
+                <button type="button" class="tip-chip" data-tip="20">20%</button>
+                <button type="button" class="tip-chip" data-tip="custom">Custom</button>
+              </div>
+
+              <div id="custom-tip-input-group" class="form-group custom-tip-group hidden">
+                <label for="custom-tip-input" class="form-label">Custom Tip Percentage (%)</label>
+                <div class="input-with-suffix">
+                  <input 
+                    type="number" 
+                    id="custom-tip-input" 
+                    class="form-input with-suffix" 
+                    placeholder="0" 
+                    min="0" 
+                    max="100" 
+                    step="0.5" 
+                    value="10" 
+                  />
+                  <span class="input-suffix" aria-hidden="true">%</span>
+                </div>
+              </div>
+
+              <div class="tip-preview-box">
+                <div class="tip-preview-item">
+                  <span class="preview-label">Tip Amount:</span>
+                  <span id="tip-preview-amount" class="preview-value">₹0.00</span>
+                </div>
+                <div class="tip-preview-item">
+                  <span class="preview-label">Total with Tip:</span>
+                  <span id="tip-preview-total" class="preview-value font-semibold">₹0.00</span>
+                </div>
+              </div>
+              <div class="field-error" id="error-tip" role="alert" aria-live="assertive"></div>
+            </div>
+          </div>
+
+          <!-- Base Currency Conversion Section -->
+          <div class="conversion-section">
+            <div class="conversion-toggle-row">
+              <label class="switch-label" for="convert-toggle">
+                <input type="checkbox" id="convert-toggle" class="switch-checkbox" />
+                <span class="switch-slider" aria-hidden="true"></span>
+                <span class="switch-text">Home Currency Conversion</span>
+              </label>
+              <span id="conversion-indicator" class="conversion-badge hidden">Converting</span>
+            </div>
+            <p class="field-hint mt-1">Ideal for international trips — see how much each friend owes in their home currency</p>
+
+            <div id="conversion-controls" class="conversion-controls hidden">
+              <div class="conversion-inputs-grid">
+                <div class="form-group mb-0">
+                  <label for="home-currency-select" class="form-label text-xs">Convert to Home Currency</label>
+                  <div class="currency-select-box home-currency-box">
+                    <span class="currency-icon" id="home-currency-icon" aria-hidden="true">₹</span>
+                    <select id="home-currency-select" class="currency-dropdown" aria-label="Select Target Home Currency">
+                      <option value="INR" selected>INR (₹) · Indian Rupee</option>
+                      <option value="USD">USD ($) · US Dollar</option>
+                      <option value="EUR">EUR (€) · Euro</option>
+                      <option value="GBP">GBP (£) · British Pound</option>
+                      <option value="AED">AED (د.إ) · UAE Dirham</option>
+                      <option value="SGD">SGD (S$) · Singapore Dollar</option>
+                      <option value="CAD">CAD (C$) · Canadian Dollar</option>
+                      <option value="AUD">AUD (A$) · Australian Dollar</option>
+                      <option value="JPY">JPY (¥) · Japanese Yen</option>
+                      <option value="THB">THB (฿) · Thai Baht</option>
+                    </select>
+                    <svg class="select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </div>
+                </div>
+
+                <div class="form-group mb-0">
+                  <label for="exchange-rate-input" class="form-label text-xs">
+                    Exchange Rate (<span id="rate-formula-label">1 USD = X INR</span>)
+                  </label>
+                  <div class="exchange-rate-field-wrap">
+                    <input 
+                      type="number" 
+                      id="exchange-rate-input" 
+                      class="form-input rate-input" 
+                      step="0.0001" 
+                      min="0.0001" 
+                      value="83.50" 
+                      aria-label="Exchange Rate"
+                    />
+                    <button type="button" id="btn-reset-rate" class="btn btn-text btn-xs" title="Reset to standard market benchmark">
+                      Reset
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="conversion-preview-box">
+                <span class="conversion-preview-formula" id="conversion-preview-summary">
+                  Rate: 1 USD = 83.50 INR · Total: $0.00 ≈ ₹0.00
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- General Form Error Message -->
+          <div id="general-form-error" class="banner-error hidden" role="alert" aria-live="assertive"></div>
+
+          <!-- Submit Buttons -->
+          <div class="form-actions">
+            <button type="submit" id="btn-submit-split" class="btn btn-primary btn-lg">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="8" y1="12" x2="16" y2="12"/>
+                <line x1="12" y1="8" x2="12" y2="16"/>
+              </svg>
+              <span>Split the Bill</span>
+            </button>
+            <button type="button" id="btn-reset-form" class="btn btn-secondary" title="Reset form fields">
+              Reset
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Right Column: Results & History -->
+      <div class="right-column">
+
+        <!-- Active Result Card -->
+        <section class="card result-card" id="result-card" aria-labelledby="result-heading">
+          <!-- Empty State (Shown before calculation) -->
+          <div id="result-empty-state" class="empty-state">
+            <div class="empty-icon-wrap" aria-hidden="true">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16l3-2 3 2 3-2 3 2 3-2 3 2V4a2 2 0 0 0-2-2z"/>
+                <path d="M9 10h6"/>
+                <path d="M9 14h6"/>
+              </svg>
+            </div>
+            <h3 class="empty-title">Bill Split Ready</h3>
+            <p class="empty-desc">
+              Enter your party name, total amount, and choose how to split. Your exact per-person share will calculate instantly with zero rounding discrepancy.
+            </p>
+            <div class="empty-features">
+              <span>✓ Exact to integer paise / cents</span>
+              <span>✓ Fair remainder distribution</span>
+              <span>✓ Multi-currency & home base conversion</span>
+              <span>✓ One-click clipboard copy & share</span>
+            </div>
+          </div>
+
+          <!-- Calculated Breakdown State -->
+          <div id="result-calculated-state" class="calculated-state hidden">
+            <div class="result-header">
+              <div>
+                <span id="result-mode-tag" class="mode-tag">Split Equally</span>
+                <h2 id="result-heading" class="result-title">Dinner with friends</h2>
+                <span id="result-timestamp" class="result-time">Just now</span>
+              </div>
+              <div class="result-badges-row">
+                <span id="result-currency-pill" class="result-currency-pill">INR (₹)</span>
+                <div class="result-verified-pill" title="Every paise accounted for">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  <span>Exact split</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Financial Metrics Overview -->
+            <div class="financial-summary-grid">
+              <div class="summary-box">
+                <span class="summary-box-label">Original Bill</span>
+                <span id="summary-original-bill" class="summary-box-value">₹0.00</span>
+              </div>
+              <div class="summary-box" id="summary-tip-box">
+                <span class="summary-box-label">Tip Included</span>
+                <span id="summary-tip-amount" class="summary-box-value">₹0.00</span>
+                <span id="summary-tip-rate" class="summary-box-sub">0%</span>
+              </div>
+              <div class="summary-box highlight-box">
+                <span class="summary-box-label">Final Total</span>
+                <span id="summary-final-total" class="summary-box-value font-bold">₹0.00</span>
+                <span id="summary-converted-total" class="summary-converted-sub hidden">≈ $0.00 USD</span>
+              </div>
+            </div>
+
+            <!-- Home Conversion Banner inside Result -->
+            <div id="result-conversion-banner" class="result-conversion-banner hidden">
+              <span class="conv-banner-icon">🌐</span>
+              <span id="result-conversion-text">Converted to Home Currency: 1 USD = 83.50 INR</span>
+            </div>
+
+            <!-- Shares Breakdown Header -->
+            <div class="breakdown-header">
+              <h3 class="breakdown-title">
+                Participant Shares (<span id="result-people-count">0</span> people)
+              </h3>
+              <span id="result-tip-note" class="tip-included-note hidden">Includes Tip</span>
+            </div>
+
+            <!-- Individual Shares List -->
+            <div id="shares-list" class="shares-list" role="list">
+              <!-- Dynamically populated shares -->
+            </div>
+
+            <!-- Total Audit Check -->
+            <div class="shares-total-audit">
+              <div class="audit-row">
+                <span class="audit-label">Total of all shares:</span>
+                <div class="audit-values-wrap">
+                  <span id="audit-shares-total" class="audit-value">₹0.00</span>
+                  <span id="audit-shares-converted" class="audit-converted-value hidden">≈ $0.00</span>
+                </div>
+              </div>
+              <div class="audit-row text-xs text-muted">
+                <span>Verification check:</span>
+                <span id="audit-shares-check" class="text-success font-medium">100% matched to final bill</span>
+              </div>
+            </div>
+
+            <!-- Action Buttons: Copy, Share -->
+            <div class="result-actions">
+              <button type="button" id="btn-copy-bill" class="btn btn-primary" title="Copy formatted bill summary to clipboard">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                <span>Copy Bill</span>
+              </button>
+              <button type="button" id="btn-share-bill" class="btn btn-secondary" title="Share via browser sheet or apps">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="18" cy="5" r="3"/>
+                  <circle cx="6" cy="12" r="3"/>
+                  <circle cx="18" cy="19" r="3"/>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                </svg>
+                <span>Share Bill</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Bill History Section -->
+        <section class="card history-card" id="history-section" aria-labelledby="history-heading">
+          <div class="history-card-header">
+            <div class="history-title-wrap">
+              <h2 id="history-heading" class="card-title">Recent Bills</h2>
+              <span id="history-badge-count" class="history-counter">0 saved</span>
+            </div>
+            <div class="history-header-actions">
+              <button type="button" id="btn-clear-history" class="btn btn-text btn-xs text-danger hidden" title="Clear all saved bill records">
+                Clear all
+              </button>
+            </div>
+          </div>
+
+          <!-- History Clear Confirmation Panel -->
+          <div id="clear-confirm-panel" class="clear-confirm-panel hidden" role="alert">
+            <p class="clear-confirm-text">Clear all saved bills from browser history?</p>
+            <div class="clear-confirm-actions">
+              <button type="button" id="btn-confirm-clear" class="btn btn-danger btn-xs">Yes, Clear All</button>
+              <button type="button" id="btn-cancel-clear" class="btn btn-secondary btn-xs">Cancel</button>
+            </div>
+          </div>
+
+          <!-- History List Container -->
+          <div id="history-list" class="history-list">
+            <!-- Populated dynamically or shows empty state -->
+          </div>
+
+          <!-- History Empty State -->
+          <div id="history-empty" class="history-empty">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <p>No previous bills saved yet. Valid calculations will appear here automatically.</p>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="footer-container">
+      <p class="footer-copy">
+        <strong>billable.co</strong> · Made for fair splits with friends · Multi-currency & home base conversion · All calculations run privately in your browser
+      </p>
+    </div>
+  </footer>
+
+  <script src="./script.js"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "name": "billable.co - Fair & Instant Bill Splitter",
+  "description": "A friendly, precise bill splitting app for dinners, trips, and shared expenses with custom splits, tips, and shareable breakdowns.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
